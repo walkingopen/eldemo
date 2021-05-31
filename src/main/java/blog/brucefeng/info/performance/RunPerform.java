@@ -5,8 +5,7 @@ import groovy.lang.Binding;
 import groovy.lang.GroovyClassLoader;
 import groovy.lang.GroovyObject;
 import groovy.lang.GroovyShell;
-import ognl.Ognl;
-import ognl.OgnlException;
+import ognl.*;
 import org.mvel2.MVEL;
 import org.mvel2.integration.VariableResolverFactory;
 import org.mvel2.integration.impl.MapVariableResolverFactory;
@@ -28,22 +27,21 @@ public class RunPerform {
 
     public static void main(String[] args) {
         try {
-            int xmax = 100,ymax = 100,zmax= 10;
+            int xmax = 100, ymax = 100, zmax = 10;
             runJava(xmax, ymax, zmax);
             runOgnl(xmax, ymax, zmax);
             runMvel(xmax, ymax, zmax);
             runSpel(xmax, ymax, zmax);
             runGroovyClass(xmax, ymax, zmax);
-//            runGroovy(xmax, ymax, zmax);
+            //runGroovy(xmax, ymax, zmax);
         } catch (Exception e) {
             e.printStackTrace();
         }
-
     }
 
     public static void runJava(int xmax, int ymax, int zmax) {
         Date start = new Date();
-        Integer result = 0;
+        int result = 0;
         for (int xval = 0; xval < xmax; xval++) {
             for (int yval = 0; yval < ymax; yval++) {
                 for (int zval = 0; zval <= zmax; zval++) {
@@ -57,7 +55,8 @@ public class RunPerform {
     }
 
     public static void runOgnl(int xmax, int ymax, int zmax) throws OgnlException {
-        String expression = "x + y*2 - z";
+        final String expression = "x + y*2 - z";
+        Object expr = Ognl.parseExpression(expression);
         Map<String, Object> context = new HashMap<String, Object>();
         Integer result = 0;
         Date start = new Date();
@@ -67,7 +66,7 @@ public class RunPerform {
                     context.put("x", xval);
                     context.put("y", yval);
                     context.put("z", zval);
-                    Integer cal = (Integer) Ognl.getValue(expression, context);
+                    Integer cal = (Integer) Ognl.getValue(expr, context);
                     result += cal;
                 }
             }
@@ -77,11 +76,11 @@ public class RunPerform {
     }
 
     public static void runMvel(int xmax, int ymax, int zmax) {
-        Map context = new HashMap();
-        String expression = "x + y*2 - z";
+        final String expression = "x + y*2 - z";
         Serializable compileExpression = MVEL.compileExpression(expression);
         Integer result = 0;
         Date start = new Date();
+        Map context = new HashMap();
         for (int xval = 0; xval < xmax; xval++) {
             for (int yval = 0; yval < ymax; yval++) {
                 for (int zval = 0; zval <= zmax; zval++) {
@@ -100,23 +99,20 @@ public class RunPerform {
     }
 
     public static void runSpel(int xmax, int ymax, int zmax) {
-        SpelParserConfiguration config;
-        ExpressionParser parser;
-        config = new SpelParserConfiguration(SpelCompilerMode.IMMEDIATE, RunSpel.class.getClassLoader());
-        parser = new SpelExpressionParser(config);
+        final String expressionStr = "#x + #y*2 - #z";
+        SpelParserConfiguration config = new SpelParserConfiguration(SpelCompilerMode.IMMEDIATE, RunSpel.class.getClassLoader());
+        ExpressionParser parser = new SpelExpressionParser(config);
+        Expression expression = parser.parseExpression(expressionStr);
         StandardEvaluationContext context = new StandardEvaluationContext();
         Integer result = 0;
-        String expressionStr = "#x + #y*2 - #z";
         Date start = new Date();
         for (Integer xval = 0; xval < xmax; xval++) {
             for (Integer yval = 0; yval < ymax; yval++) {
-                for (Integer zval = 0; zval <= zmax; zval++) {
+                for (int zval = 0; zval <= zmax; zval++) {
                     context.setVariable("x", xval);
                     context.setVariable("y", yval);
                     context.setVariable("z", zval);
-                    Expression expression = parser.parseExpression(expressionStr);
                     Integer cal = expression.getValue(context, Integer.class);
-//                    System.out.println("x:"+xval+",y:"+yval+",z"+zval+ ",cal:"+cal);
                     result += cal;
                 }
             }
@@ -152,9 +148,10 @@ public class RunPerform {
         Class groovyClass = null;
         try {
             groovyClass = loader.parseClass(new File(
-                    "/Users/brucechen/program/hack/eldemo/src/main/java/blog/brucefeng/info/performance/GroovyCal.groovy"));
+                    "src/main/java/blog/brucefeng/info/performance/GroovyCal.groovy"));
         } catch (IOException e) {
             e.printStackTrace();
+            return;
         }
         GroovyObject groovyObject = null;
         try {
@@ -169,7 +166,7 @@ public class RunPerform {
         for (int xval = 0; xval < xmax; xval++) {
             for (int yval = 0; yval < ymax; yval++) {
                 for (int zval = 0; zval <= zmax; zval++) {
-                    Object[] args = {xval,yval,zval};
+                    Object[] args = {xval, yval, zval};
                     Integer cal = (Integer) groovyObject.invokeMethod("cal", args);
                     result += cal;
                 }
